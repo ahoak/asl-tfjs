@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite App</title>
+  </head>
+  <body>
+    <div id="app"></div>
+     
+   <div id="main">
+    <div class="container">
+            <div class="canvas-wrapper">
+             <canvas id="c_img" ></canvas>
+             <canvas id="cv_img" ></canvas>
+             <canvas id="ts_processed_img" ></canvas>
+             <h3>Predictions</h3>
+             <pre class="predictions"></pre>
+             <div id="output"></div>
+         </div>
+       </div>
+    </div>
+    <video id="webcam" autoplay width="500" height="400"></video>
+    
+    <button id="enableCam">Enable Webcam</button>
+ 
+    <!-- Import TensorFlow.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.11.0/dist/tf.min.js" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+   <!-- Import the page's JavaScript to do some stuff -->
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>

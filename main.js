@@ -97,18 +97,15 @@ async function onResults(results) {
         }, []);
         const tensor = tf.tensor1d(flattened).expandDims(0);
         const prediction = model.predict(tensor);
+        const index = prediction.dataSync()[0];
+        // console.log("prediction",   value)
         // ---CHECK RESULTS----
-        prediction
-          .squeeze()
-          .array()
-          .then((index) => {
-            const rounded_result = Math.floor(index);
+        const rounded_result = Math.floor(index);
 
-            if (rounded_result > 0 && rounded_result < classes.length) {
-              console.log("rounded_result", classes[rounded_result]);
-              predictions.innerText = `${classes[rounded_result]}`;
-            }
-          });
+        if (rounded_result > 0 && rounded_result < classes.length) {
+          console.log("rounded_result", classes[rounded_result]);
+          predictions.innerText = `${classes[rounded_result]}`;
+        }
 
         tensor.dispose();
         drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {
@@ -139,17 +136,18 @@ async function startPredictionLoop() {
 }
 
 async function processImage(img) {
-  const imageWidth = img.width || 500;
-  const imageHeight = img.height || 400;
+  const imageWidth = img.width || 200;
+  const imageHeight = img.height || 200;
+  console.log("imageWidth,imageHeight ", imageWidth, imageHeight);
 
   cvCtx.save();
-  cvCtx.clearRect(0, 0, CV_CANVAS.width, CV_CANVAS.height);
-  cvCtx.drawImage(img, 0, 0, CV_CANVAS.width, CV_CANVAS.height);
-  const image = cvCtx.getImageData(0, 0, imageWidth, imageHeight);
+  cvCtx.clearRect(0, 0, 200, 200);
+  cvCtx.drawImage(img, 0, 0, 200, 200);
+  const image = cvCtx.getImageData(0, 0, 200, 200);
 
   const processedImage = await cv.imageProcessing(image);
   const ct = tfCanvas.getContext("2d");
-  ct.putImageData(processedImage.data.payload, canvas.width - imageWidth, 0);
+  ct.putImageData(processedImage.data.payload, 0, 0);
 }
 
 async function captureHands() {
@@ -206,11 +204,11 @@ async function startVideo() {
     // getUsermedia parameters.
     const constraints = {
       video: true,
-      width: 640,
-      height: 480,
+      width: 200,
+      height: 200,
     };
     ENABLE_CAM_BUTTON.innerText = "Stop";
-    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
     VIDEO.srcObject = stream;
     VIDEO.play();
   } else {

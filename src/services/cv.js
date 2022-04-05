@@ -49,6 +49,10 @@ class CV {
   imageProcessing(payload) {
     return this._dispatch({ msg: "imageProcessing", payload });
   }
+
+  drawRegion(payload) {
+    return this._dispatch({ msg: "drawRegion", payload });
+  }
 }
 
 // Export the same instant everywhere

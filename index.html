@@ -24,10 +24,16 @@
       <canvas id="videoInputDisplay"></canvas>
     </div>
     <div>
-      <select id="sourceSelection">
-        <option value="webcam">Webcam</option>
-        <option value="training" selected>Training Data</option>
-      </select>
+      <div>
+        <select id="sourceSelection" style="display:block">
+          <option value="webcam">Webcam</option>
+          <option value="training" selected>Training Data</option>
+        </select>
+        <label>
+          Use CV
+          <input id="useCV" type="checkbox" checked />
+        </label>
+      </div>
       <button id="startStopBtn">Start</button>
     </div>
 

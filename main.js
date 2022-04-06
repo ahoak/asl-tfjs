@@ -1,23 +1,37 @@
+import { TrainingDataSource } from "./src/datasources/training.js";
+import { WebcamDataSource } from "./src/datasources/webcam.js";
 import cv from "./src/services/cv.js";
 
-const VIDEO = document.getElementById("webcam");
 const CV_CANVAS = document.getElementById("cv_img");
 const cvCtx = CV_CANVAS.getContext("2d");
 
-const ENABLE_CAM_BUTTON = document.getElementById("enableCam");
+const START_STOP_BUTTON = document.getElementById("startStopBtn");
 const predictions = document.querySelector(".predictions");
 const canvas = document.getElementById("c_img");
-const tfCanvas = document.getElementById("ts_processed_img");
 const ctx = canvas.getContext("2d");
+
+const tfCanvas = document.getElementById("ts_processed_img");
+const tfCanvasCtx = tfCanvas.getContext("2d");
+
 const output = document.getElementById("output");
+const videoInputDisplay = document.getElementById('videoInputDisplay')
+const inputCtx = videoInputDisplay.getContext('2d')
+
+const sourceSelection = document.getElementById('sourceSelection')
+sourceSelection.addEventListener('change', onSourceChanged)
+
+START_STOP_BUTTON.addEventListener("click", toggleVideo);
+
+/**
+ * @type {WebcamDataSource | TrainingDataSource | null}
+ */
+let imageSource = null
+
 let model = undefined;
 let hands = undefined;
 // ADD MODEL URL HERE
 const MODEL_JSON_URL = "assets/model.json";
 let stream = null;
-let stopPredictionLoop = null;
-const INPUT_HEIGHT = 64;
-const INPUT_WIDTH = 64;
 let cvLoaded = false;
 const classes = [
   "A",
@@ -95,14 +109,15 @@ async function onResults(results) {
           acc = [...acc, ...ptArray];
           return acc;
         }, []);
-        const tensor = tf.tensor1d(flattened).expandDims(0);
+        const normalized = normalize(flattened)
+        const tensor = tf.tensor1d(normalized).expandDims(0);
         const prediction = model.predict(tensor);
         const index = prediction.dataSync()[0];
         // console.log("prediction",   value)
         // ---CHECK RESULTS----
-        const rounded_result = Math.floor(index);
+        const rounded_result = Math.round(index);
 
-        if (rounded_result > 0 && rounded_result < classes.length) {
+        if (rounded_result >= 0 && rounded_result < classes.length) {
           console.log("rounded_result", classes[rounded_result]);
           predictions.innerText = `${classes[rounded_result]}`;
         }
@@ -119,99 +134,94 @@ async function onResults(results) {
   ctx.restore();
 }
 
+function normalize(arr/*: any[]*/) {
+  const max = arr.reduce((maxSoFar, item) => Math.max(maxSoFar, Math.abs(item)), arr[0])
+  return arr.map(n => n / max)
+}
+
 loadModel();
+imageSource = createImageSourceByType(sourceSelection.value)
 
-async function startPredictionLoop() {
-  let done = false;
-  async function predict() {
-    if (!done) {
-      await captureHands();
-      setTimeout(predict, 100);
-    }
+async function onSourceChanged(event) {
+  imageSource = createImageSourceByType(event.target.value)
+  await stop()
+}
+
+async function processImage(img, width = 200, height = 200) {
+  if (width > 0 && height > 0) {
+
+    // Scale our canvis to match the incoming image dimensions
+    cvCtx.canvas.width = width
+    cvCtx.canvas.height = height
+    tfCanvasCtx.canvas.width = width
+    tfCanvasCtx.canvas.height = height
+
+    cvCtx.clearRect(0, 0, width, height);
+    cvCtx.drawImage(img, 0, 0);
+    
+    const image = cvCtx.getImageData(0, 0, width, height);
+
+    // const processedImage = await cv.imageProcessing(image);
+    // tfCanvasCtx.putImageData(processedImage.data.payload, 0, 0);
+
+    tfCanvasCtx.putImageData(image, 0, 0)
   }
-  setTimeout(predict, 100);
-  return () => {
-    done = true;
-  };
 }
 
-async function processImage(img) {
-  const imageWidth = img.width || 200;
-  const imageHeight = img.height || 200;
-  console.log("imageWidth,imageHeight ", imageWidth, imageHeight);
-
-  cvCtx.save();
-  cvCtx.clearRect(0, 0, 200, 200);
-  cvCtx.drawImage(img, 0, 0, 200, 200);
-  const image = cvCtx.getImageData(0, 0, 200, 200);
-
-  const processedImage = await cv.imageProcessing(image);
-  const ct = tfCanvas.getContext("2d");
-  ct.putImageData(processedImage.data.payload, 0, 0);
-}
-
-async function captureHands() {
-  processImage(VIDEO);
-  await hands.send({ image: tfCanvas });
-}
-
-function stopVideo() {
-  if (stopPredictionLoop) {
-    stopPredictionLoop();
-    stopPredictionLoop = null;
-  }
-  if (stream) {
-    for (const track of stream.getTracks()) {
-      track.stop();
-    }
-    stream = null;
-    ENABLE_CAM_BUTTON.innerText = "Start";
+async function toggleVideo() {
+  // Little jank
+  const isStarted = START_STOP_BUTTON.innerText == "Stop";
+  if (isStarted) {
+    await stop();
+  } else {
+    await start();
   }
 }
 
 async function stop() {
-  stopVideo();
+  await stopVideo();
 }
-
-ENABLE_CAM_BUTTON.addEventListener("click", async () => {
-  // Little jank
-  const isStarted = ENABLE_CAM_BUTTON.innerText == "Stop";
-  if (isStarted) {
-    stop();
-  } else {
-    start();
-  }
-});
 
 async function start() {
-  stopVideo();
+  await stopVideo();
   await startVideo();
-  stopPredictionLoop = await startPredictionLoop();
-}
-/**
- * Check if getUserMedia is supported for webcam access.
- **/
-function hasGetUserMedia() {
-  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 }
 
 // /**
 //  * Enable the webcam with video constraints applied.
 //  **/
 async function startVideo() {
-  console.log("enabling webcam");
-  if (hasGetUserMedia()) {
-    // getUsermedia parameters.
-    const constraints = {
-      video: true,
-      width: 200,
-      height: 200,
-    };
-    ENABLE_CAM_BUTTON.innerText = "Stop";
-    stream = await navigator.mediaDevices.getUserMedia(constraints);
-    VIDEO.srcObject = stream;
-    VIDEO.play();
-  } else {
-    console.warn("getUserMedia() is not supported by your browser");
+  console.log("starting data source");
+  START_STOP_BUTTON.innerText = "Stop";
+  if (imageSource) {
+    await imageSource.start()
   }
+}
+
+async function stopVideo() {
+  console.log("stopping data source");
+  if (imageSource) {
+    await imageSource.stop()
+  }
+  START_STOP_BUTTON.innerText = "Start";
+}
+
+/**
+ * Creates an image source by type
+ * @param {"webcam" | "training"} type 
+ */
+function createImageSourceByType(type) {
+  console.log(`creating ${type} datasource`)
+  const webcam = type === 'webcam'
+  const source = webcam ? new WebcamDataSource(15) : new TrainingDataSource(60, 'asl_alphabet_train', classes)
+  source.on('frameReady', async function onFrameReady(imageData, width, height) {
+    await imageSource.pause()
+    inputCtx.canvas.width = width
+    inputCtx.canvas.height = height
+    inputCtx.drawImage(imageData, 0, 0)
+    await processImage(imageData, width, height)
+    await hands.send({ image: tfCanvas });
+    await imageSource.resume()
+  })
+  return source
 }

@@ -109,19 +109,19 @@ export class TrainingDataSource {
 			this.#imageEle.onload = async () => {
 				this.#processedCanvas.width = this.#imageEle.width;
 				this.#processedCanvas.height = this.#imageEle.height
-				// ctx.drawImage(this.#imageEle, 0, 0, canvas.width, canvas.height)
-				// move to x + img's width
-				this.#processedCtx.translate(this.#imageEle.width, 0);
+				// // ctx.drawImage(this.#imageEle, 0, 0, canvas.width, canvas.height)
+				// // move to x + img's width
+				// this.#processedCtx.translate(this.#imageEle.width, 0);
 
-				// scaleX by -1; this "trick" flips horizontally
-				this.#processedCtx.scale(-1, 1);
+				// // scaleX by -1; this "trick" flips horizontally
+				// this.#processedCtx.scale(-1, 1);
 
 				// draw the img
 				// no need for x,y since we've already translated
 				this.#processedCtx.drawImage(this.#imageEle, 0, 0);
 
-				// always clean up -- reset transformations to default
-				this.#processedCtx.setTransform(1, 0, 0, 1, 0, 0);
+				// // always clean up -- reset transformations to default
+				// this.#processedCtx.setTransform(1, 0, 0, 1, 0, 0);
 				resolve(true)
 			}
 			this.#imageEle.onerror = () => {

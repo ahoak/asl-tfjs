@@ -2,7 +2,7 @@ import { TrainingDataSource } from "./src/datasources/training.js";
 import { WebcamDataSource } from "./src/datasources/webcam.js";
 import cv from "./src/services/cv.js";
 
-const CV_CANVAS = document.getElementById("cv_img");
+const CV_CANVAS = document.createElement("canvas");
 const cvCtx = CV_CANVAS.getContext("2d");
 
 const START_STOP_BUTTON = document.getElementById("startStopBtn");
@@ -10,7 +10,7 @@ const predictions = document.querySelector(".predictions");
 const canvas = document.getElementById("c_img");
 const ctx = canvas.getContext("2d");
 
-const tfCanvas = document.getElementById("ts_processed_img");
+const tfCanvas = document.createElement("canvas");
 const tfCanvasCtx = tfCanvas.getContext("2d");
 
 const output = document.getElementById("output");
@@ -139,12 +139,13 @@ function normalize(arr/*: any[]*/) {
   return arr.map(n => n / max)
 }
 
-loadModel();
+const loadedPromise = loadModel();
 imageSource = createImageSourceByType(sourceSelection.value)
 
 async function onSourceChanged(event) {
-  imageSource = createImageSourceByType(event.target.value)
+  // stop the previous one first
   await stop()
+  imageSource = createImageSourceByType(event.target.value)
 }
 
 async function processImage(img, width = 200, height = 200) {
@@ -161,10 +162,10 @@ async function processImage(img, width = 200, height = 200) {
     
     const image = cvCtx.getImageData(0, 0, width, height);
 
-    // const processedImage = await cv.imageProcessing(image);
-    // tfCanvasCtx.putImageData(processedImage.data.payload, 0, 0);
+    const processedImage = await cv.imageProcessing(image);
+    tfCanvasCtx.putImageData(processedImage.data.payload, 0, 0);
 
-    tfCanvasCtx.putImageData(image, 0, 0)
+    // tfCanvasCtx.putImageData(image, 0, 0)
   }
 }
 
@@ -183,6 +184,7 @@ async function stop() {
 }
 
 async function start() {
+  await loadedPromise
   await stopVideo();
   await startVideo();
 }

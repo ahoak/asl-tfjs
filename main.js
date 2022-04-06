@@ -2,6 +2,7 @@ import { TrainingDataSource } from "./src/datasources/trainingImages.js";
 import { TrainingVideoDataSource } from "./src/datasources/trainingVideos.js";
 import { WebcamDataSource } from "./src/datasources/webcam.js";
 import { mirrorImage } from "./src/imageUtils.js";
+import { classes, HandPoseModel } from "./src/models/handPose.js";
 
 const CV_CANVAS = document.createElement("canvas");
 const cvCtx = CV_CANVAS.getContext("2d");
@@ -31,112 +32,9 @@ let useCV = true
  */
 let imageSource = null
 
-let model = undefined;
-let hands = undefined;
-// ADD MODEL URL HERE
-const MODEL_JSON_URL = "assets/model.json";
-const classes = [
-  "A",
-  "B",
-  "C",
-  "D",
-  "E",
-  "F",
-  "G",
-  "H",
-  "I",
-  "J",
-  "K",
-  "L",
-  "M",
-  "N",
-  "O",
-  "P",
-  "Q",
-  "R",
-  "S",
-  "T",
-  "U",
-  "V",
-  "W",
-  "X",
-  "Y",
-  "Z",
-  "del",
-  "nothing",
-  "space",
-];
+const model = new HandPoseModel()
+const loadedPromise = model.load();
 
-async function loadModel() {
-  // Load the model.json and binary files you hosted. Note this is
-  // an asynchronous operation so you use the await keyword
-  if (model === undefined) {
-    console.log("getting model");
-    model = await tf.loadLayersModel(MODEL_JSON_URL);
-    console.log("loaded model");
-  }
-  if (!hands) {
-    console.log("loading hand model...");
-
-    hands = new Hands({
-      locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-      },
-    });
-    hands.setOptions({
-      maxNumHands: 2,
-      modelComplexity: 1,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5,
-    });
-    hands.onResults(onResults);
-    console.log("hand model loaded");
-  }
-}
-
-async function onResults(results) {
-  ctx.save();
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (results.multiHandLandmarks) {
-    for (const landmarks of results.multiHandLandmarks) {
-      const totalLandmarks = landmarks.length;
-      if (totalLandmarks > 0) {
-        const flattened = landmarks.reduce((acc, res) => {
-          const ptArray = [res.x, res.y, res.z];
-          acc = [...acc, ...ptArray];
-          return acc;
-        }, []);
-        const normalized = normalize(flattened)
-        const tensor = tf.tensor1d(normalized).expandDims(0);
-        const prediction = model.predict(tensor);
-        const index = prediction.dataSync()[0];
-        // console.log("prediction",   value)
-        // ---CHECK RESULTS----
-        const rounded_result = Math.round(index);
-
-        if (rounded_result >= 0 && rounded_result < classes.length) {
-          console.log("rounded_result", classes[rounded_result]);
-          predictions.innerText = `${classes[rounded_result]}`;
-        }
-
-        tensor.dispose();
-        drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {
-          color: "#00FF00",
-          lineWidth: 5,
-        });
-        drawLandmarks(ctx, landmarks, { color: "#FF0000", lineWidth: 2 });
-      }
-    }
-  }
-  ctx.restore();
-}
-
-function normalize(arr/*: any[]*/) {
-  const max = arr.reduce((maxSoFar, item) => Math.max(maxSoFar, Math.abs(item)), arr[0])
-  return arr.map(n => n / max)
-}
-
-const loadedPromise = loadModel();
 imageSource = createImageSourceByType(sourceSelection.value)
 
 async function onSourceChanged(event) {
@@ -225,7 +123,8 @@ function createImageSourceByType(type) {
     inputCtx.canvas.height = height
     inputCtx.drawImage(imageData, 0, 0)
     await processImage(imageData, width, height)
-    await hands.send({ image: tfCanvas });
+    const result = await model.predict(tfCanvas, ctx)
+    predictions.innerHTML = result ? result : "No predictions"
     await imageSource.resume()
   })
   return source

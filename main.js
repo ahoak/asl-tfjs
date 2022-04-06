@@ -1,6 +1,6 @@
 import { TrainingDataSource } from "./src/datasources/training.js";
 import { WebcamDataSource } from "./src/datasources/webcam.js";
-import cv from "./src/services/cv.js";
+import { mirrorImage } from "./src/imageUtils.js";
 
 const CV_CANVAS = document.createElement("canvas");
 const cvCtx = CV_CANVAS.getContext("2d");
@@ -13,14 +13,17 @@ const ctx = canvas.getContext("2d");
 const tfCanvas = document.createElement("canvas");
 const tfCanvasCtx = tfCanvas.getContext("2d");
 
-const output = document.getElementById("output");
 const videoInputDisplay = document.getElementById('videoInputDisplay')
 const inputCtx = videoInputDisplay.getContext('2d')
+const useCVCheckbox = document.getElementById('useCV')
+useCVCheckbox.addEventListener('change', onUseCVChanged)
 
 const sourceSelection = document.getElementById('sourceSelection')
 sourceSelection.addEventListener('change', onSourceChanged)
 
 START_STOP_BUTTON.addEventListener("click", toggleVideo);
+
+let useCV = true
 
 /**
  * @type {WebcamDataSource | TrainingDataSource | null}
@@ -31,8 +34,6 @@ let model = undefined;
 let hands = undefined;
 // ADD MODEL URL HERE
 const MODEL_JSON_URL = "assets/model.json";
-let stream = null;
-let cvLoaded = false;
 const classes = [
   "A",
   "B",
@@ -90,11 +91,6 @@ async function loadModel() {
     hands.onResults(onResults);
     console.log("hand model loaded");
   }
-  console.log("loading cv...");
-  // Load the cv model
-  await cv.load();
-  cvLoaded = true;
-  console.log("done");
 }
 
 async function onResults(results) {
@@ -148,6 +144,10 @@ async function onSourceChanged(event) {
   imageSource = createImageSourceByType(event.target.value)
 }
 
+function onUseCVChanged(event) {
+  useCV = !!event.target.checked
+}
+
 async function processImage(img, width = 200, height = 200) {
   if (width > 0 && height > 0) {
 
@@ -159,13 +159,8 @@ async function processImage(img, width = 200, height = 200) {
 
     cvCtx.clearRect(0, 0, width, height);
     cvCtx.drawImage(img, 0, 0);
-    
-    const image = cvCtx.getImageData(0, 0, width, height);
 
-    const processedImage = await cv.imageProcessing(image);
-    tfCanvasCtx.putImageData(processedImage.data.payload, 0, 0);
-
-    // tfCanvasCtx.putImageData(image, 0, 0)
+    await mirrorImage(cvCtx, tfCanvasCtx, useCV)
   }
 }
 

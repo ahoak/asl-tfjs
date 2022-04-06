@@ -1,4 +1,5 @@
-import { TrainingDataSource } from "./src/datasources/training.js";
+import { TrainingDataSource } from "./src/datasources/trainingImages.js";
+import { TrainingVideoDataSource } from "./src/datasources/trainingVideos.js";
 import { WebcamDataSource } from "./src/datasources/webcam.js";
 import { mirrorImage } from "./src/imageUtils.js";
 
@@ -205,12 +206,19 @@ async function stopVideo() {
 
 /**
  * Creates an image source by type
- * @param {"webcam" | "training"} type 
+ * @param {"webcam" | "trainingImages" | "trainingVideos"} type 
  */
 function createImageSourceByType(type) {
   console.log(`creating ${type} datasource`)
-  const webcam = type === 'webcam'
-  const source = webcam ? new WebcamDataSource(15) : new TrainingDataSource(60, 'asl_alphabet_train', classes)
+  let source = null
+  if (type === 'trainingImages') {
+    source = new TrainingDataSource(60, 'asl_alphabet_train', classes)
+  } else if (type === 'trainingVideos') {
+    source = new TrainingVideoDataSource(60, 'asl_low_quality_videos', classes)
+  } else {
+    // Default to webcam
+    source = new WebcamDataSource(30)
+  }
   source.on('frameReady', async function onFrameReady(imageData, width, height) {
     await imageSource.pause()
     inputCtx.canvas.width = width

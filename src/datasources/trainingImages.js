@@ -1,4 +1,5 @@
 import { createNanoEvents } from 'nanoevents'
+// import * as JSZip from 'jszip'
 
 export class TrainingDataSource {
 	#fps = 15
@@ -96,8 +97,12 @@ export class TrainingDataSource {
 					this.#signIdx++
 					this.#signTrainIdx = 0
 				}
+				if (this.#signIdx >= this.#classes.length) {
+					this.#emitter.emit('complete')
+					this.stop()
+				} 
 			} 
-				
+
 			// Try to target the given FPS
 			const diff = this.#lastRun - Date.now;
 			this.#loopTimeout = setTimeout(this.#imageLoop, Math.max((this.#fps / 1000) - diff, 0))
@@ -130,4 +135,72 @@ export class TrainingDataSource {
 			this.#imageEle.src = path
 		})
 	}
+
+	/**
+	 * @returns [string[], Uint8Array[]]
+	 */
+	static async loadTrainingData(dataset, classes) {
+		const signData = []
+		const imageData = []
+
+		// const zip = new JSZip()
+		// const zipData = (await fetch(`assets/data/training/${dataset}.zip`)).blob()
+		// const loadedZip = await zip.loadAsync(zipData)
+		// const fileNames = Object.keys(loadedZip.files)
+		// for (const fileName of fileNames) {
+		// 	if (fileName.endsWith('.jpg')) {
+		// 		const [dataset, sign, actualImageFileName] = fileName.split('/')
+		// 		const blob = await loadedZip.file(fileName).async('blob')
+		// 		const image = await loadImage(URL.createObjectURL(blob))
+		// 		signData.push(sign)
+		// 		imageData.push(image.getImageData(0, 0, image.canvas.width, image.canvas.height))
+		// 	}
+		// }
+
+		// let signIdx = 0
+		// let signTrainIdx = 0
+		// while (true) {
+		// 	const sign = classes[signIdx]
+		// 	// The training datasets start at 1
+		// 	const path = `assets/data/training/${dataset}/${sign}/${sign}${signTrainIdx + 1}.jpg`
+		// 	try {
+		// 		const image = await loadImage(path)
+		// 		signData.push(sign)
+		// 		imageData.push(image.getImageData(0, 0, image.canvas.width, image.canvas.height))
+		// 		signTrainIdx++
+		// 	} catch (e) {
+		// 		// Assume missing, so we're done
+		// 		signIdx++
+		// 		signTrainIdx = 0
+		// 	}
+		// 	if (signIdx >= classes.length) {
+		// 		break
+		// 	} 
+		// }
+	
+		return [signData, imageData]
+	}
+}
+
+const imageEle = new Image()
+const imageCanvas = document.createElement('canvas')
+const imageCtx = imageCanvas.getContext('2d')
+/**
+ * 
+ * @param {string} path 
+ * @returns {Promise<CanvasRenderingContext2D>}
+ */
+function loadImage(path) {
+	return new Promise((resolve, reject) => {
+		imageEle.onload = async () => {
+			imageCtx.canvas.width = imageEle.width
+			imageCtx.canvas.height = imageEle.height
+			imageCtx.drawImage(imageEle, 0, 0)
+			resolve(imageCtx)
+		}
+		imageEle.onerror = (event) => {
+			reject(event)
+		}
+		imageEle.src = path
+	})
 }

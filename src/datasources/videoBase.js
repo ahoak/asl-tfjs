@@ -122,6 +122,10 @@ export class VideoDataSourceBase {
 			}
 			await this.#videoEle.play()
 		} else {
+			if (this.#started) {
+				this.#emitter.emit('complete')
+				this.stop()
+			}
 			this.#cleanVideoElement()
 		}
 	}

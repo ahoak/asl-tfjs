@@ -37,6 +37,14 @@ const loadedPromise = model.load();
 
 imageSource = createImageSourceByType(sourceSelection.value)
 
+const loadStartTime = Date.now()
+// const trainingData = TrainingDataSource.loadTrainingData('asl_alphabet_train', classes).then((data) => {
+//   console.log(`Loading took: ${Date.now() - loadStartTime}`)
+//   console.log(data)
+// })
+
+// console.log(trainingData)
+
 async function onSourceChanged(event) {
   // stop the previous one first
   await stop()

@@ -29,16 +29,28 @@ export class TrainingVideoDataSource extends VideoDataSourceBase {
 		let numFails = 0
 		while (!await checkFileExists(trainFile)) {
 			// Clamp to the number of signs
-			this.#signIdx = (this.#signIdx + 1) % this.#classes.length
-			this.#signTrainIdx = 0
-			sign = this.#classes[this.#signIdx ]
-			trainFile = `assets/data/training/${this.#dataset}/${sign}/${sign}${this.#signTrainIdx + 1}.mkv`
-			numFails++
-			if (numFails >= maxNumLoadFails) {
-				throw new Error("Could not find any available training images!")
+			this.#signIdx = this.#signIdx + 1
+
+			// No more classes
+			if (this.#signIdx >= this.#classes.length) {
+				return null
+			} else {
+				this.#signTrainIdx = 0
+				sign = this.#classes[this.#signIdx]
+				trainFile = `assets/data/training/${this.#dataset}/${sign}/${sign}${this.#signTrainIdx + 1}.mkv`
+				numFails++
+				if (numFails >= maxNumLoadFails) {
+					throw new Error("Could not find any available training images!")
+				}
 			}
 		}
 		return trainFile
+	}
+
+	async start() {
+		this.#signIdx = 0
+		this.#signTrainIdx = 0
+		super.start()
 	}
 
 	async onVideoComplete() {

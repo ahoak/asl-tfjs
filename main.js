@@ -101,7 +101,7 @@ const classes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
     
     croppedCtx.putImageData(cImage.data.payload.image, 0,0 )
     // croppedCtx.clearRect(0, 0, CROPPED_CANVAS.width, CROPPED_CANVAS.height);
-    predict(cImage.data.payload.image, cImage.data.payload.coords)
+    predict(image, cImage.data.payload.coords)
   
 
   }

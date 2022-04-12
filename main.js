@@ -68,7 +68,6 @@ function onUseCVChanged(event) {
 }
 
 async function processImage(img, width = 200, height = 200) {
-  console.log("processing image")
   if (width > 0 && height > 0) {
 
     // Scale our canvis to match the incoming image dimensions
@@ -91,7 +90,6 @@ function handleOutputTableReset(){
 }
 
 async function toggleVideo() {
-  console.log("toggleVideo")
   // Little jank
   const isStarted = START_STOP_BUTTON.innerText == "Stop";
   if (isStarted) {
@@ -148,7 +146,7 @@ function createImageSourceByType(type) {
   } else if (type === 'trainingVideos') {
     const path = config.videos.testPath ?? `assets/data/${dataset}`
     
-    source = new TrainingVideoDataSource(60, path, letterClasses)
+    source = new TrainingVideoDataSource(60, path, letterClasses, config.videos.folder, config.videos.file)
   } else {
     // Default to webcam
     source = new WebcamDataSource(30)
@@ -158,10 +156,10 @@ function createImageSourceByType(type) {
     inputCtx.canvas.width = width
     inputCtx.canvas.height = height
     inputCtx.drawImage(imageData, 0, 0)
-    // await processImage(imageData, width, height)
-    const result = await model.predict(videoInputDisplay, ctx)
+    await processImage(imageData, width, height)
+    const result = await model.predict(tfCanvas, ctx)
     const prediction = result ? `${result}` : "No predictions"
-    insertRow(sign, prediction, index)
+    insertRow(sign, prediction, index, result)
     predictions.innerHTML = result ? `${result}` : "No predictions"
     await imageSource.resume()
   })

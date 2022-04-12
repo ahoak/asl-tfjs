@@ -21,6 +21,6 @@ export class WebcamDataSource extends VideoDataSourceBase {
 			};
 			this.#stream = await navigator.mediaDevices.getUserMedia(constraints);
 		}
-		return this.#stream
+		return [this.#stream]
 	}
 }

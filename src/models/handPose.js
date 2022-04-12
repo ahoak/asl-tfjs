@@ -1,37 +1,4 @@
-
-// ADD MODEL URL HERE
-const MODEL_JSON_URL = "assets/model.json";
-export const classes = [
-	"A",
-	"B",
-	"C",
-	"D",
-	"E",
-	"F",
-	"G",
-	"H",
-	"I",
-	"J",
-	"K",
-	"L",
-	"M",
-	"N",
-	"O",
-	"P",
-	"Q",
-	"R",
-	"S",
-	"T",
-	"U",
-	"V",
-	"W",
-	"X",
-	"Y",
-	"Z",
-	"del",
-	"nothing",
-	"space",
-];
+import { classes, MODEL_JSON_URL } from "../../constants"
 
 export class HandPoseModel {
 	#hands = null
@@ -165,10 +132,10 @@ export class HandPoseModel {
 					this.#debugContext.clearRect(0, 0, this.#debugContext.canvas.width, this.#debugContext.canvas.height);
 
 					drawConnectors(this.#debugContext, landmarks, HAND_CONNECTIONS, {
-						color: "#00FF00",
-						lineWidth: 5,
+						color: "#FFF",
+						lineWidth: 3,
 					});
-					drawLandmarks(this.#debugContext, landmarks, { color: "#FF0000", lineWidth: 2 });
+					drawLandmarks(this.#debugContext, landmarks, { color: "#7f5a83", lineWidth: 2 });
 				}
 
 				// just one for now

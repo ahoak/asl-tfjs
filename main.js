@@ -2,7 +2,12 @@ import { TrainingDataSource } from "./src/datasources/trainingImages.js";
 import { TrainingVideoDataSource } from "./src/datasources/trainingVideos.js";
 import { WebcamDataSource } from "./src/datasources/webcam.js";
 import { mirrorImage } from "./src/imageUtils.js";
-import { classes, HandPoseModel } from "./src/models/handPose.js";
+import {  HandPoseModel } from "./src/models/handPose.js";
+import { config } from "./config"
+import { classes } from "./constants.js";
+import { insertRow, resetTable, removeTable} from "./src/predictionTable"
+
+import './style.css'
 
 const CV_CANVAS = document.createElement("canvas");
 const cvCtx = CV_CANVAS.getContext("2d");
@@ -20,12 +25,16 @@ const inputCtx = videoInputDisplay.getContext('2d')
 const useCVCheckbox = document.getElementById('useCV')
 useCVCheckbox.addEventListener('change', onUseCVChanged)
 
+let useCV = !!config.useCV
+useCVCheckbox.checked = useCV
+
+const logOutput = !!config.logOutput
+removeTable(logOutput)
+
 const sourceSelection = document.getElementById('sourceSelection')
 sourceSelection.addEventListener('change', onSourceChanged)
 
 START_STOP_BUTTON.addEventListener("click", toggleVideo);
-
-let useCV = true
 
 /**
  * @type {WebcamDataSource | TrainingDataSource | null}
@@ -43,6 +52,9 @@ const loadStartTime = Date.now()
 //   console.log(data)
 // })
 
+
+
+
 // console.log(trainingData)
 
 async function onSourceChanged(event) {
@@ -56,6 +68,7 @@ function onUseCVChanged(event) {
 }
 
 async function processImage(img, width = 200, height = 200) {
+  console.log("processing image")
   if (width > 0 && height > 0) {
 
     // Scale our canvis to match the incoming image dimensions
@@ -71,12 +84,20 @@ async function processImage(img, width = 200, height = 200) {
   }
 }
 
+function handleOutputTableReset(){
+  if(logOutput){
+    resetTable()
+  }
+}
+
 async function toggleVideo() {
+  console.log("toggleVideo")
   // Little jank
   const isStarted = START_STOP_BUTTON.innerText == "Stop";
   if (isStarted) {
     await stop();
   } else {
+    handleOutputTableReset()
     await start();
   }
 }
@@ -96,6 +117,7 @@ async function start() {
 //  **/
 async function startVideo() {
   console.log("starting data source");
+ 
   START_STOP_BUTTON.innerText = "Stop";
   if (imageSource) {
     await imageSource.start()
@@ -117,22 +139,30 @@ async function stopVideo() {
 function createImageSourceByType(type) {
   console.log(`creating ${type} datasource`)
   let source = null
+  const letterClasses = config.classes ?? classes
+  const dataset = `${config.dataset}`
   if (type === 'trainingImages') {
-    source = new TrainingDataSource(60, 'asl_alphabet_train', classes)
+    const path = config.images.testPath ?? `assets/data/${dataset}`
+    
+    source = new TrainingDataSource(60, path, letterClasses, config.images.folder, config.images.file)
   } else if (type === 'trainingVideos') {
-    source = new TrainingVideoDataSource(60, 'asl_low_quality_videos', classes)
+    const path = config.videos.testPath ?? `assets/data/${dataset}`
+    
+    source = new TrainingVideoDataSource(60, path, letterClasses)
   } else {
     // Default to webcam
     source = new WebcamDataSource(30)
   }
-  source.on('frameReady', async function onFrameReady(imageData, width, height) {
+  source.on('frameReady', async function onFrameReady(imageData, width, height, sign, index) {
     await imageSource.pause()
     inputCtx.canvas.width = width
     inputCtx.canvas.height = height
     inputCtx.drawImage(imageData, 0, 0)
-    await processImage(imageData, width, height)
-    const result = await model.predict(tfCanvas, ctx)
-    predictions.innerHTML = result ? result : "No predictions"
+    // await processImage(imageData, width, height)
+    const result = await model.predict(videoInputDisplay, ctx)
+    const prediction = result ? `${result}` : "No predictions"
+    insertRow(sign, prediction, index)
+    predictions.innerHTML = result ? `${result}` : "No predictions"
     await imageSource.resume()
   })
   return source

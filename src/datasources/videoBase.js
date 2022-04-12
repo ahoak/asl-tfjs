@@ -12,6 +12,8 @@ export class VideoDataSourceBase {
 	#loopTimeout = null
 	#emitter = null
 	#paused = false
+	#idx = 0
+	#sign= null // : string | null
 
 	/**
 	 * @type {string | MediaStream | MediaSource | Blob | File | null}
@@ -51,7 +53,10 @@ export class VideoDataSourceBase {
 		if (!this.#started) {
 			this.#started = true
 			this.#paused = false
-			this.#source = await this.fetchVideoSourceInternal()
+			const [source, sign, idx ] = await this.fetchVideoSourceInternal()
+			this.#source = source
+			this.#sign = sign
+			this.#idx = idx
 			await this.#loadVideoElement(this.#source)
 			this.#imageLoop()
 			this.#emitter.emit('start')
@@ -100,7 +105,7 @@ export class VideoDataSourceBase {
 		this.#loopTimeout = null
 		if (this.#source && this.#started) {
 			if (!this.#paused) {
-				this.#emitter.emit('frameReady', this.#videoEle, this.width, this.height)
+				this.#emitter.emit('frameReady', this.#videoEle, this.width, this.height, this.#sign, this.#idx)
 			}
 
 			// Try to target the given FPS

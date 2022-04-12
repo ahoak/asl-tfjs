@@ -22,7 +22,19 @@ export class TrainingDataSource {
 	#loopTimeout = null
 	#emitter = null
 	#paused = false
-	#dataset = null // : string | null
+	#datasetPath = null // : string | null
+
+	/**
+	 * @typedef {Function} TypeFnGetSource
+	 * @param {string} letterclass
+	 * @param {number} index
+	 * @returns {string}
+	 */
+	/**
+	 * @type TypeFnGetSource | null
+	 */
+	#getFile = null
+	#getFolder = null
 
 	/**
 	 * The index of this sign that we're training
@@ -39,14 +51,16 @@ export class TrainingDataSource {
 	 */
 	#classes = []
 
-	constructor(fps, dataset, classes) {
+	constructor(fps, datasetPath, classes, getFolder, getFile) {
 		this.#emitter = createNanoEvents()
 		this.#fps = fps
 		this.#imageEle = new Image()
-		this.#dataset = dataset
+		this.#datasetPath = datasetPath
 		this.#processedCanvas = document.createElement('canvas')
 		this.#processedCtx = this.#processedCanvas.getContext('2d')
 		this.#classes = classes
+		this.#getFile = getFile
+		this.#getFolder = getFolder
 	}
 
 	async pause() {
@@ -86,12 +100,21 @@ export class TrainingDataSource {
 		if (this.#started) {
 			if (!this.#paused) {
 				const sign = this.#classes[this.#signIdx]
-
-				// The training datasets start at 1
-				const path = `assets/data/training/${this.#dataset}/${sign}/${sign}${this.#signTrainIdx + 1}.jpg`
+				let path = `${this.#datasetPath}`
+				if(this.#getFolder || this.#getFile) {
+					const folder = this.#getFolder && this.#getFolder(sign, this.#signIdx)
+					path = folder? `${path}/${folder}`: path
+					const fileName = this.#getFile && this.#getFile(sign, this.#signIdx)
+					path = fileName ? `${path}/${fileName}`:  path
+				} else {
+					// default path
+					path = `${this.datasetPath}/${sign}/${this.#signTrainIdx + 1}.jpg`
+				}			
+				
 				if (await this.#loadImage(path)) {
-					this.#emitter.emit('frameReady', this.#processedCanvas, this.#processedCanvas.width, this.#processedCanvas.height)
+					this.#emitter.emit('frameReady', this.#processedCanvas, this.#processedCanvas.width, this.#processedCanvas.height, sign, this.#signIdx)
 					this.#signTrainIdx++
+					this.#signIdx++
 				} else {
 					// Done
 					this.#signIdx++
@@ -109,7 +132,7 @@ export class TrainingDataSource {
 		}
 	}
 
-	#loadImage = (path /*: string */) => {
+	#loadImage = (path /*: string */, sign /*: string */) => {
 		return new Promise((resolve) => {
 			this.#imageEle.onload = async () => {
 				this.#processedCanvas.width = this.#imageEle.width;
@@ -133,23 +156,24 @@ export class TrainingDataSource {
 				resolve(false)
 			}
 			this.#imageEle.src = path
+			this.#imageEle.id = sign
 		})
 	}
 
 	/**
 	 * @returns [string[], Uint8Array[]]
 	 */
-	static async loadTrainingData(dataset, classes) {
-		const signData = []
-		const imageData = []
+	static async loadTrainingData(datasetPath, classes) {
+		// const signData = []
+		// const imageData = []
 
 		// const zip = new JSZip()
-		// const zipData = (await fetch(`assets/data/training/${dataset}.zip`)).blob()
+		// const zipData = (await fetch(`assets/data/training/${datasetPath}.zip`)).blob()
 		// const loadedZip = await zip.loadAsync(zipData)
 		// const fileNames = Object.keys(loadedZip.files)
 		// for (const fileName of fileNames) {
 		// 	if (fileName.endsWith('.jpg')) {
-		// 		const [dataset, sign, actualImageFileName] = fileName.split('/')
+		// 		const [datasetPath, sign, actualImageFileName] = fileName.split('/')
 		// 		const blob = await loadedZip.file(fileName).async('blob')
 		// 		const image = await loadImage(URL.createObjectURL(blob))
 		// 		signData.push(sign)
@@ -161,8 +185,8 @@ export class TrainingDataSource {
 		// let signTrainIdx = 0
 		// while (true) {
 		// 	const sign = classes[signIdx]
-		// 	// The training datasets start at 1
-		// 	const path = `assets/data/training/${dataset}/${sign}/${sign}${signTrainIdx + 1}.jpg`
+		// 	// The training datasetPaths start at 1
+		// 	const path = `assets/data/training/${datasetPath}/${sign}/${sign}${signTrainIdx + 1}.jpg`
 		// 	try {
 		// 		const image = await loadImage(path)
 		// 		signData.push(sign)
@@ -180,6 +204,7 @@ export class TrainingDataSource {
 	
 		return [signData, imageData]
 	}
+
 }
 
 const imageEle = new Image()

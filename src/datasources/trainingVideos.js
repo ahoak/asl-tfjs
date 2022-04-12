@@ -2,9 +2,11 @@ import { VideoDataSourceBase } from './videoBase'
 
 const maxNumLoadFails = 5
 export class TrainingVideoDataSource extends VideoDataSourceBase {
-	#dataset = null // : string | null
+	#datasetPath = null // : string | null
 
 	#signIdx = 0
+
+
 
 	/**
 	 * The index within the given sign that we're training on
@@ -16,18 +18,41 @@ export class TrainingVideoDataSource extends VideoDataSourceBase {
 	 */
 	#classes = []
 
-	constructor(fps, dataset, classes) {
+	/**
+	 * @type TypeFnGetSource | null
+	 */
+	 #getFile = null
+	 #getFolder = null
+ 
+
+	constructor(fps, datasetPath, classes, getFolder, getFile) {
 		super(fps)
-		this.#dataset = dataset
+		this.#datasetPath = datasetPath
 		this.#classes = classes
+		this.#getFile = getFile
+		this.#getFolder = getFolder
+	}
+
+	getVideoPath(sign){
+		let path = `${this.#datasetPath}`
+		if(this.#getFolder || this.#getFile) {
+			const folder = this.#getFolder(sign, this.#signIdx)
+			path = `${path}/${folder}`
+			const fileName = this.#getFile(sign, this.#signIdx)
+			path = `${path}/${fileName}`
+		} else {
+			// default path
+			path = `${this.#datasetPath}/${sign}/${this.#signTrainIdx + 1}.mkv` 
+		}
+		return path
 	}
 
 	async fetchVideoSourceInternal() {
 		let sign = this.#classes[this.#signIdx]
-		let trainFile = `assets/data/training/${this.#dataset}/${sign}/${sign}${this.#signTrainIdx + 1}.mkv` 
+		let path = getVideoPath(sign)
 		
 		let numFails = 0
-		while (!await checkFileExists(trainFile)) {
+		while (!await checkFileExists(path)) {
 			// Clamp to the number of signs
 			this.#signIdx = this.#signIdx + 1
 
@@ -37,14 +62,14 @@ export class TrainingVideoDataSource extends VideoDataSourceBase {
 			} else {
 				this.#signTrainIdx = 0
 				sign = this.#classes[this.#signIdx]
-				trainFile = `assets/data/training/${this.#dataset}/${sign}/${sign}${this.#signTrainIdx + 1}.mkv`
+				path = getVideoPath(sign)
 				numFails++
 				if (numFails >= maxNumLoadFails) {
 					throw new Error("Could not find any available training images!")
 				}
 			}
 		}
-		return trainFile
+		return [path, sign, this.#signIdx]
 	}
 
 	async start() {

@@ -12,10 +12,14 @@ export class VideoDataSourceBase {
 	#loopTimeout = null
 	#emitter = null
 	#paused = false
+	#idx = 0
+	#sign= null // : string | null
 
 	/**
 	 * @type {string | MediaStream | MediaSource | Blob | File | null}
 	 */
+	#sources = null
+
 	#source = null
 
 	constructor(fps) {
@@ -51,10 +55,17 @@ export class VideoDataSourceBase {
 		if (!this.#started) {
 			this.#started = true
 			this.#paused = false
-			this.#source = await this.fetchVideoSourceInternal()
-			await this.#loadVideoElement(this.#source)
-			this.#imageLoop()
-			this.#emitter.emit('start')
+			const [sources, sign, idx ] = await this.fetchVideoSourceInternal()
+			this.#sources = sources
+			this.#sign = sign
+			this.#idx = idx
+			await this.#sources.map(async (source)=>{
+				this.#source = source
+				await this.#loadVideoElement(source)
+				this.#imageLoop()
+				this.#emitter.emit('start')
+			})
+			
 		}
 	}
 
@@ -89,8 +100,10 @@ export class VideoDataSourceBase {
 	 * refreshes the video source
 	 */
 	async reloadVideoSource() {
-		this.#source = await this.fetchVideoSourceInternal()
-		await this.#loadVideoElement(this.#source)
+		this.#sources = await this.fetchVideoSourceInternal()
+		this.#sources.map(async (source)=>{
+			await this.#loadVideoElement(source)
+		})
 	}
 
 	/**
@@ -100,7 +113,7 @@ export class VideoDataSourceBase {
 		this.#loopTimeout = null
 		if (this.#source && this.#started) {
 			if (!this.#paused) {
-				this.#emitter.emit('frameReady', this.#videoEle, this.width, this.height)
+				this.#emitter.emit('frameReady', this.#videoEle, this.width, this.height, this.#sign, this.#idx)
 			}
 
 			// Try to target the given FPS

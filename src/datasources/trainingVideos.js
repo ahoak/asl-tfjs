@@ -1,68 +1,101 @@
-import { VideoDataSourceBase } from './videoBase'
+import { VideoDataSourceBase } from "./videoBase";
 
-const maxNumLoadFails = 5
+const maxNumLoadFails = 5;
 export class TrainingVideoDataSource extends VideoDataSourceBase {
-	#dataset = null // : string | null
+  #datasetPath = null; // : string | null
 
-	#signIdx = 0
+  #signIdx = 0;
 
-	/**
-	 * The index within the given sign that we're training on
-	 */
-	#signTrainIdx = 0
+  /**
+   * The index within the given sign that we're training on
+   */
+  #signTrainIdx = 0;
 
-	/**
-	 * @type string[]
-	 */
-	#classes = []
+  /**
+   * @type string[]
+   */
+  #classes = [];
 
-	constructor(fps, dataset, classes) {
-		super(fps)
-		this.#dataset = dataset
-		this.#classes = classes
-	}
+  /**
+   * @type TypeFnGetSource | null
+   */
+  #getFile = null;
+  #getFolder = null;
 
-	async fetchVideoSourceInternal() {
-		let sign = this.#classes[this.#signIdx]
-		let trainFile = `assets/data/training/${this.#dataset}/${sign}/${sign}${this.#signTrainIdx + 1}.mkv` 
-		
-		let numFails = 0
-		while (!await checkFileExists(trainFile)) {
-			// Clamp to the number of signs
-			this.#signIdx = this.#signIdx + 1
+  constructor(fps, datasetPath, classes, getFolder, getFile) {
+    super(fps);
+    this.#datasetPath = datasetPath;
+    this.#classes = classes;
+    this.#getFile = getFile;
+    this.#getFolder = getFolder;
+  }
 
-			// No more classes
-			if (this.#signIdx >= this.#classes.length) {
-				return null
-			} else {
-				this.#signTrainIdx = 0
-				sign = this.#classes[this.#signIdx]
-				trainFile = `assets/data/training/${this.#dataset}/${sign}/${sign}${this.#signTrainIdx + 1}.mkv`
-				numFails++
-				if (numFails >= maxNumLoadFails) {
-					throw new Error("Could not find any available training images!")
-				}
-			}
-		}
-		return trainFile
-	}
+  getVideoPath(sign) {
+    let pathArray = [];
+    let path = `${this.#datasetPath}`;
+    if (this.#getFolder || this.#getFile) {
+      const folder =  this.#getFolder && this.#getFolder(sign, this.#signIdx);
+      path = folder ? `${path}/${folder}` : path;
+      const fileNameOrNames = this.#getFile && this.#getFile(sign, this.#signIdx); // returns filename/filenames[]/undefined
+      if (Array.isArray(fileNameOrNames)) {
+        pathArray = fileNameOrNames.map((name) => `${path}/${name}`);
+      } else {
+        path = fileNameOrNames ? `${path}/${fileNameOrNames}` : path;
+        pathArray = [path];
+      }
+    } else {
+      // default path
+      path = `${this.#datasetPath}/${sign}/${this.#signTrainIdx + 1}.mkv`;
+      pathArray = [path];
+    }
+    return pathArray;
+  }
 
-	async start() {
-		this.#signIdx = 0
-		this.#signTrainIdx = 0
-		super.start()
-	}
+  async fetchVideoSourceInternal() {
+    let sign = this.#classes[this.#signIdx];
+    let paths = this.getVideoPath(sign);
 
-	async onVideoComplete() {
-		this.#signTrainIdx++
+    let numFails = 0;
+    while (!(await checkFileExists(paths))) {
+      // Clamp to the number of signs
+      this.#signIdx = this.#signIdx + 1;
 
-		// Tell the base class to reload
-		this.reloadVideoSource()
-	}
+      // No more classes
+      if (this.#signIdx >= this.#classes.length) {
+        return null;
+      } else {
+        this.#signTrainIdx = 0;
+        sign = this.#classes[this.#signIdx];
+        paths = this.getVideoPath(sign);
+        numFails++;
+        if (numFails >= maxNumLoadFails) {
+          throw new Error("Could not find any available training images!");
+        }
+      }
+    }
+    return [paths, sign, this.#signIdx];
+  }
+
+  async start() {
+    this.#signIdx = 0;
+    this.#signTrainIdx = 0;
+    super.start();
+  }
+
+  async onVideoComplete() {
+    this.#signTrainIdx++;
+
+    // Tell the base class to reload
+    this.reloadVideoSource();
+  }
 }
 
-async function checkFileExists(path) {
-	return new Promise((resolve) => {
-		fetch(path, { method: "HEAD" }).then((res) => resolve(res.ok))
+async function checkFileExists(paths) {
+	const ifExistsPromise = paths.map((path)=>{
+		return new Promise((resolve) => {
+			fetch(path, { method: "HEAD" }).then((res) => resolve(res.ok));
+		  });
 	})
+	return Promise.all(ifExistsPromise)
+ 
 }

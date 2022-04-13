@@ -6,36 +6,88 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vite App</title>
   </head>
-  <body>
-    <div id="app"></div>
 
-    <div id="main">
-      <div class="container">
+  <body>
+    <div id="app">
+      <div id="main">
         <div class="canvas-wrapper">
           <canvas id="c_img"></canvas>
-          <h3>Predictions</h3>
-          <pre class="predictions"></pre>
-          <div id="output"></div>
+          <div id="input-options">
+            <h3>Predictions</h3>
+            <pre class="predictions"></pre>
+            <div id="output"></div>
+            <div id="input-selections">
+              <div>
+                <select id="sourceSelection" >
+                  <option value="webcam" selected>Webcam</option>
+                  <option value="trainingImages">Training Image Data</option>
+                  <option value="trainingVideos">Training Video Data</option>
+                </select>
+              </div>
+              <div>
+                <label>
+                  Use OpenCV
+                  <input id="useCV" type="checkbox" checked />
+                </label>
+              </div>
+              <div>
+                <button id="startStopBtn">Start</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <canvas id="videoInputDisplay"></canvas>
+          <div id="table-div">
+            <div class="tbl-header">
+              <table
+                cellpadding="0"
+                cellspacing="0"
+                border="0"
+                id="prediction-table-header"
+              >
+                <thead>
+                  <tr>
+                    <th>Actual</th>
+                    <th>Prediction</th>
+                  </tr>
+                </thead>
+              </table>
+            </div>
+            <div class="tbl-content">
+              <table
+                cellpadding="0"
+                cellspacing="0"
+                border="0"
+                id="prediction-table"
+              >
+                <tbody></tbody>
+              </table>
+            </div>
+            <div>
+              <table
+                cellpadding="0"
+                cellspacing="0"
+                border="0"
+                id="prediction-table-total"
+              >
+                <tfoot>
+                  <tr>
+                    <td>Total Correct:</td>
+                    <td id="prediction-output">0</td>
+                    <td id="prediction-percent"></td>
+                  </tr>
+                  <tr>
+                    <td>No Predictions:</td>      
+                    <td id="prediction-no-predicts"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-
-    <div>
-      <canvas id="videoInputDisplay"></canvas>
-    </div>
-    <div>
-      <div>
-        <select id="sourceSelection" style="display:block">
-          <option value="webcam" selected>Webcam</option>
-          <option value="trainingImages">Training Image Data</option>
-          <option value="trainingVideos">Training Video Data</option>
-        </select>
-        <label>
-          Use OpenCV
-          <input id="useCV" type="checkbox" checked />
-        </label>
-      </div>
-      <button id="startStopBtn">Start</button>
     </div>
 
     <!-- Import TensorFlow.js library -->

@@ -1,6 +1,8 @@
 
 // ADD MODEL URL HERE
 export const MODEL_JSON_URL = "assets/model.json";
+
+
 export const classes = [
 	"A",
 	"B",
